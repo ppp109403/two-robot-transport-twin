@@ -1,0 +1,16 @@
+image: munji_3f_2025_wide.pgm
+mode: trinary
+resolution: 0.05
+# origin: [-1.27, -5.02, 0]
+origin: [-46, -31, 0]
+negate: 0
+occupied_thresh: 0.65
+free_thresh: 0.19
+# free_thresh 를 0.25 -> 0.19 로 내린 사본.
+#
+# 원본 0.25 는 픽셀 205(미지, 점유도 0.196078) 를 **free 로 발행**한다. 이 맵은
+# 90.96 % 가 205 라, /map 에 -1 이 하나도 안 실리고 플래너의
+# unknown_is_occupied 가 무효가 된다. 그러면 미탐색 영역이 뻥 뚫린 바닥으로
+# 보여 그리로 계획이 나가고, 실제로는 벽인 자리를 통과한다.
+#
+# 0.19 로 내리면 205 가 -1(unknown) 로 발행되어 unknown_is_occupied 가 산다.

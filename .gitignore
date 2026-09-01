@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# USD — 로봇 에셋(수백 MB)과 압출 맵은 repo 에 넣지 않는다.
+# 로봇 에셋은 별도 제공, 압출 맵은 twin/world/map_extrude.py 로 생성한다.
+*.usd
+*.usda
+*.usdc
+*.usdz
+twin/world/assets/
+
+# 실행 산출물
+twin/data/runs/          # 에피소드 로그 (log.npz, meta.json)
+twin/data/plans/         # MPC 계획 CSV — twin/tools/solve_plan.py 로 생성
+outputs/
+logs/
+*.log
+
+# 편집기 / OS
+.DS_Store
+.idea/
+.vscode/

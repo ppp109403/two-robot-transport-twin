@@ -1,0 +1,132 @@
+# ===========================================================================
+#  관제 PC -> 로봇 2대 도메인 브릿지
+# ===========================================================================
+#  도메인 배치
+#    10 : 관제 PC (이 PC)  two_robot_nlp_planner 가 두 로봇의 계획을 계산
+#    11 : 로봇 A  (네임스페이스 a)
+#    12 : 로봇 B  (네임스페이스 b)
+#
+#  로봇 A 와 B 는 서로 다른 도메인이라 **서로를 아예 보지 못한다.**
+#  관제의 디버그 토픽(/object_path, /seed_path, /two_robot_plan/markers,
+#  /sdf_viz 등 RViz 용)도 아래 목록에 없으므로 로봇으로 나가지 않는다.
+#
+#  실행 (관제 PC)
+#    ros2 launch mobile_manipulator_trajectory domain_bridge.launch.py
+#
+#  ★ 브릿지 프로세스는 ROS_DOMAIN_ID 환경변수를 쓰지 않는다.
+#    아래 from_domain / to_domain 만 본다.
+#
+#  ★ 로봇 PC 는 ROS_DOMAIN_ID 만 설정하면 된다 (11 또는 12).
+#    브릿지 설치도, 추가 설정도 필요 없다.
+# ===========================================================================
+
+name: mobile_manipulator_domain_bridge
+
+from_domain: 10
+to_domain: 10
+
+topics:
+
+  # =========================================================================
+  #  관제(10) -> 로봇 A(11)
+  # =========================================================================
+
+  # 계획 결과. two_robot_nlp_node 가 LATCHED(transient_local, depth 1) 로 낸다.
+  #   -> 로봇이 늦게 접속해도 마지막 계획을 받는다.
+  /a/base_path:
+    type: nav_msgs/msg/Path
+    from_domain: 10
+    to_domain: 11
+    qos:
+      durability: transient_local
+      history: keep_last
+      depth: 1
+
+  /a/ee_path:
+    type: nav_msgs/msg/Path
+    from_domain: 10
+    to_domain: 11
+    qos:
+      durability: transient_local
+      history: keep_last
+      depth: 1
+
+  # 실행 스트림. depth 10 volatile 로 stream_rate(기본 100 Hz) 로 흘린다.
+  /a/base_pose:
+    type: geometry_msgs/msg/PoseStamped
+    from_domain: 10
+    to_domain: 11
+
+  /a/base_twist:
+    type: geometry_msgs/msg/TwistStamped
+    from_domain: 10
+    to_domain: 11
+
+  /a/ee_pose:
+    type: geometry_msgs/msg/PoseStamped
+    from_domain: 10
+    to_domain: 11
+
+  # =========================================================================
+  #  관제(10) -> 로봇 B(12)
+  # =========================================================================
+
+  /b/base_path:
+    type: nav_msgs/msg/Path
+    from_domain: 10
+    to_domain: 12
+    qos:
+      durability: transient_local
+      history: keep_last
+      depth: 1
+
+  /b/ee_path:
+    type: nav_msgs/msg/Path
+    from_domain: 10
+    to_domain: 12
+    qos:
+      durability: transient_local
+      history: keep_last
+      depth: 1
+
+  /b/base_pose:
+    type: geometry_msgs/msg/PoseStamped
+    from_domain: 10
+    to_domain: 12
+
+  /b/base_twist:
+    type: geometry_msgs/msg/TwistStamped
+    from_domain: 10
+    to_domain: 12
+
+  /b/ee_pose:
+    type: geometry_msgs/msg/PoseStamped
+    from_domain: 10
+    to_domain: 12
+
+# ===========================================================================
+#  참고
+# ===========================================================================
+#  1) QoS
+#     *_path 는 소스가 LATCHED(transient_local / keep_last / depth 1) 라
+#     브릿지 출력도 같게 맞췄다. 이걸 안 맞추면 로봇이 늦게 붙었을 때
+#     이미 발행된 계획을 영영 못 받는다 (계획은 한 번만 나간다).
+#
+#     *_pose / *_twist 는 소스가 volatile(depth 10) 이고 stream_rate 로
+#     계속 흐르므로 override 없이 자동 매칭에 맡긴다.
+#
+#  2) 실행 완료 신호
+#     /plan_execution_done (std_msgs/Bool, LATCHED) 은 지금 안 넘긴다.
+#     로봇이 필요하면 아래를 두 벌(11, 12) 추가할 것. 키가 중복되면 안 되므로
+#     remap 을 쓰거나 브릿지를 두 개 띄운다.
+#
+#  3) 역방향 (로봇 -> 관제)
+#     로봇 실제 상태를 관제로 되돌리려면 from/to 를 뒤집어 추가한다.
+#     로봇쪽 토픽 이름이 다르면 remap 으로 맞춘다.
+#
+#  4) RMW / 방화벽 / 멀티캐스트
+#     세 PC 의 RMW_IMPLEMENTATION 이 같아야 한다 (이 PC 는 rmw_fastrtps_cpp).
+#     ufw 가 켜져 있으면 같은 서브넷을 허용할 것:
+#       sudo ufw allow from 192.168.0.0/24
+#     디스커버리 확인:  ros2 multicast receive  /  ros2 multicast send
+# ===========================================================================

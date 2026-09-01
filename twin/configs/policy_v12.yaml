@@ -1,0 +1,73 @@
+# v29 정책 계약. 체크포인트마다 한 벌 만든다.
+#
+# 이 파일이 유일한 진실이다. 특히 yaw_offset 은 **repo 전역 상수에서 읽지 않는다** —
+# PLAN_YAW_OFFSET 은 현재 +pi/2 (v30 용) 이고 v29 는 -pi/2 로 학습됐다. import 하면
+# 에러 없이 180 도 틀어진 목표를 준다.
+
+name: v12
+trained: (handoff/traj_v12)
+
+checkpoint:
+  # 배포본 (실기에 나간 것과 동일 파일)
+  onnx: handoff/traj_v12/policy.onnx        # md5 347f7b3aa040f38f0226e8409255568f
+  jit:  handoff/traj_v12/policy.pt          # md5 c089d74c171b18e2859a19a32f572472
+  # 학습 런 (재개·재평가용)
+
+observation:
+  module: handoff/traj_v12/ee_obs.py        # md5 92160810ac91cf24247aa41340a99728
+  dim: 58
+  # 참고: v12~v28 은 58 차원이다. 58 차원 브리지를 그대로 쓰면 죽는다.
+
+action:
+  dim: 8
+  arm:
+    joints: [j1, j2, j3, j4, j5, j6]
+    scale: 0.5
+    use_default_offset: true
+    # 관절목표 = default_pos + 0.5 * action[0:6]
+    default_pos: [0.0, -1.5708, 1.5708, -1.5708, -1.5708, 0.0]
+  base:
+    max_lin_vel: 0.5
+    max_ang_vel: 1.0
+    max_reverse_vel: 0.2
+    max_lin_accel: 0.6
+    max_ang_accel: 1.5
+
+target:
+  # 플래너의 2D EE 셋포인트에 얹어야 하는 것 (plan_adapter.py 규칙)
+  yaw_offset: 0.0000000000000000   # 90 도 수정 **이전** 판이라 보정이 0 이다 (eval_plans 의 --yaw-offset 주의문)
+  goal_z: 0.55                      # 학습 범위 0.50 ~ 0.60
+  pitch: 3.141592653589793          # 정확히 pi (손 아래로). 학습은 고정값이다
+  roll: 0.0
+
+control:
+  rate_hz: 30.0
+  sim_dt: 0.008333333333333333      # 1/120
+  decimation: 4
+
+localization:
+  # Phase 1 은 참값. 학습 분포의 무잡음 끝이라 분포 밖은 아니지만 결과는 낙관적이다.
+  mode: ground_truth                # ground_truth | amcl_model | ros_amcl
+  # Phase 3 에서 켤 때 쓰는 값 — 학습과 동일해야 한다 (mobile_reach_env_cfg.py)
+  amcl_model:
+    pos_noise_std: 0.005
+    yaw_noise_std: 0.004
+    update_period: 0.18
+    latency: 0.06
+    jump_prob: 0.002
+
+# 플래너 파라미터 프로파일 — 노드 기본값은 우리 한계의 3 배가 넘는다.
+# EE 속력 ~= obj_v_max + (obj_len/2) * obj_w_max  이고 막대가 2 m 라 계수가 1.0 이다.
+planner:
+  ee_v_max: 0.20
+  obj_v_max: 0.12
+  obj_w_max: 0.08
+  v_max: 0.30
+  v_min: -0.20
+  w_max: 0.60
+  reach_min: 0.15
+  reach_max: 0.60
+  ee_forward_min: -0.30      # 팔이 뒤를 본다
+  base_margin: 0.70          # v29 차체 편차 중앙 0.50 / 95% 0.65 를 흡수해야 한다
+  obj_len: 2.00
+
