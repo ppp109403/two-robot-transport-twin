@@ -13,8 +13,12 @@ __pycache__/
 twin/world/assets/
 
 # 실행 산출물
-twin/data/runs/          # 에피소드 로그 (log.npz, meta.json)
-twin/data/plans/         # MPC 계획 CSV — twin/tools/solve_plan.py 로 생성
+# ★ 줄 끝 주석을 쓰지 말 것 — gitignore 는 줄 첫 칸의 # 만 주석으로 본다.
+#   "twin/data/runs/   # 로그" 라고 쓰면 그 전체가 패턴이 되어 아무것도 안 걸러진다.
+# 에피소드 로그 (log.npz, meta.json)
+twin/data/runs/
+# MPC 계획 CSV — twin/tools/solve_plan.py 로 생성한다
+twin/data/plans/
 outputs/
 logs/
 *.log

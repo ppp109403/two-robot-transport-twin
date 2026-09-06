@@ -27,6 +27,7 @@
 |---|---|
 | [`planner/`](planner/) | MPC 플래너 ROS 2 패키지 (`mobile_manipulator_trajectory`). A\* 시드 + CasADi/IPOPT NLP, RViz 관제 노드 |
 | [`twin/`](twin/) | Isaac Sim 검증 리그. 씬 구성, 계획 보간, 목표 변환, 정책 재생, 정합성 게이트 |
+| [`twin/control/`](twin/control/) | **고전 제어기 기준선** — 차체 유니사이클 궤적추종 + 팔 미분 IK. 정책 없이 "계획이 추종 가능한가" 만 본다 |
 | [`source/ee_track_ppo/`](source/ee_track_ppo/) | Isaac Lab task 패키지. 리그가 액션 항·가감속 램프·액션 지연을 **학습과 같은 코드로** 받기 위해 필요 |
 | [`handoff/traj_v29/`](handoff/traj_v29/) | 채택 정책 배포본 (`policy.pt`, `policy.onnx`, `ee_obs.py`) + 판정 기록 |
 | `handoff/traj_v28/`, `traj_v12/` | 비교용 정책 (차체 편차 ↔ EE 오차 교환관계를 볼 때) |
@@ -229,6 +230,44 @@ csv:<dir>:<a|b>    MPC 계획 디렉토리에서 한쪽
 | `--bar 0` | 두 EE 사이 시각용 막대 끄기 |
 | `--hold-only` | 시작 자세 유지만. 수렴값만 볼 때 |
 | `--spawn-a "x,y,yaw"` | 배치 자리 직접 지정 (기본은 맵에서 자동 선택) |
+
+### 5.3b 고전 제어기 기준선 — **정책보다 먼저 돌릴 것**
+
+"MPC 계획을 로봇이 따라갈 수 있는가" 와 "정책이 잘 학습됐는가" 는 다른 질문이다.
+정책으로만 재생하면 둘이 섞여서, 추종이 나쁠 때 무엇 탓인지 가를 수 없다.
+
+차체는 유니사이클 궤적추종기로, 팔은 미분 IK 로 같은 계획을 돌린다. 플랜트(씬·액션
+항·액션지연·가감속 램프·로컬라이제이션)는 정책 경로와 **완전히 같고 제어기만 다르다.**
+
+```bash
+twin/run.sh twin/runner/run_classic.py --raw-coords \
+    --track-a csv:twin/data/plans/L150_base018_obj005_wa:a \
+    --track-b csv:twin/data/plans/L150_base018_obj005_wa:b \
+    --out twin/data/runs/classic_wa --report /tmp/classic.txt
+```
+
+읽는 법:
+
+| 고전 | 정책 | 해석 |
+|---|---|---|
+| O | O | 계획도 정책도 문제 없음 |
+| O | X | **정책 문제.** 학습을 손볼 차례 |
+| X | X | **계획 문제.** 정책을 아무리 학습해도 안 된다 |
+| X | O | 정책이 IK 보다 낫다 — 대개 정책이 차체를 옮겨서 푼 경우다 |
+
+제어기 진단이 원인까지 갈라 준다:
+
+```
+IK 위치잔차 크고 리치 > reach_max   -> 계획이 팔 밖을 요구한다
+차체오차 크고 속도지령 포화 잦음     -> 계획이 차체 한계보다 빠르다
+둘 다 작은데 EE 오차가 크면          -> 제어기 이득 문제 (--kx/--ky/--kth)
+```
+
+이득·IK 옵션: `--kx 1.5 --ky 6.0 --kth 2.5`, `--ik-lam 0.05`, `--ik-w-rot 0.35`,
+`--ik-max-step 0.15`, `--lead 0.10`. 나머지 옵션은 `run_episode.py` 와 같다.
+
+> **`--raw-coords` 를 잊지 말 것.** MPC 계획 CSV 는 이미 map 절대좌표다. 빼면
+> 리그가 맵 자유공간에서 자리를 다시 골라 놓아 버린다 (그건 `plans.npz` 궤적용이다).
 
 ### 5.4 정책 재생 — 라이브 (RViz 로 찍으면 Isaac 이 바로 따라감)
 
