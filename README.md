@@ -33,7 +33,16 @@
 | [`handoff/map_munji_3f_2025_wide/`](handoff/map_munji_3f_2025_wide/) | 2D SLAM 맵 (`.pgm` / `.yaml`). 플래너·`map_server`·압출이 모두 이 파일을 쓴다 |
 | `data/plans.npz` | 실기 MPC 주행 122 개. 뒤 24 개가 학습 held-out — 리그 종단 검증에 쓴다 |
 
-개발 기록(무엇을 왜 그렇게 했는지, 잡은 버그, 미해결 항목)은 [`twin/README_KR.md`](twin/README_KR.md) 에 있다.
+### 문서
+
+| 문서 | 누구를 위해 |
+|---|---|
+| **[`docs/STUDENT_GUIDE_KR.md`](docs/STUDENT_GUIDE_KR.md)** | **처음 쓰는 사람.** 설치 → MPC 경로 생성 → Isaac 재생 → 결과 읽기, 커맨드 전부 |
+| [`docs/BASE_TRACKING_KR.md`](docs/BASE_TRACKING_KR.md) | 차체 추종을 보상에 넣으면 왜 무너지는가 — 여섯 판의 실측, 원인, 다음 시도 |
+| [`twin/README_KR.md`](twin/README_KR.md) | 개발 기록. 무엇을 왜 그렇게 했는지, 잡은 버그, 미해결 항목 |
+
+**처음이면 [학생용 실행 가이드](docs/STUDENT_GUIDE_KR.md) 부터 읽으면 된다.**
+아래 §3~§5 는 이미 환경이 갖춰진 사람을 위한 요약이다.
 
 ---
 
